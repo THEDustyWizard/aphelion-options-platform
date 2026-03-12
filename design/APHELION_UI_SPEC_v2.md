@@ -1,0 +1,622 @@
+# APHELION — UI/UX Design Specification v2.0
+**Layout:** News & Recommendation Hub (confirmed by APHELION 2026-03-12)
+**Designer:** UI Rex  |  **Supersedes:** v0.1
+
+---
+
+## Design Philosophy
+
+**The workflow is: See → Decide → Research → Execute (on TOS)**
+
+APHELION's primary job is surface signal, not bury it. The user opens the app and immediately knows:
+- What's moving in the market right now (news)
+- What trades APHELION recommends based on that news (recs)
+- Why (one click away, not the default view)
+
+Research panels are always accessible but never in the way. The user drills down when they want confirmation — not as the starting point.
+
+```
+SURFACE LAYER (default)          DRILL-DOWN (on demand)
+─────────────────────────        ─────────────────────────
+News Feed + AI Digest     →      Full ticker analysis
+Recommendation Cards      →      Options chain + greeks
+Sector Sentiment          →      Screener with filters
+Watchlist triggers        →      P&L simulator
+                          →      Export to TOS
+```
+
+---
+
+## Color Palette & Design Language (unchanged from v1)
+
+```
+Primary Background:    #0D0F14   (near-black navy)
+Secondary Background:  #141720   (dark slate)
+Card/Panel Background: #1C2030   (charcoal)
+Panel Elevated:        #222640   (for active/hover states)
+Border/Divider:        #2A3050   (subtle blue-grey)
+
+Accent — Bullish:      #00E5A0   (cyan-green)
+Accent — Bearish:      #FF4D6D   (coral red)
+Accent — Neutral:      #6C8EEF   (periwinkle blue)
+Accent — Warning:      #FFB547   (amber)
+Accent — Primary CTA:  #7C6FF7   (violet)
+Accent — Breaking:     #FF6B35   (orange — breaking news only)
+
+Text Primary:          #E8EAF0
+Text Secondary:        #8892A4
+Text Muted:            #4A5568
+
+Font — UI:             Inter / DM Sans
+Font — Data/Mono:      JetBrains Mono
+```
+
+---
+
+## Application Shell
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ TOPBAR (56px, sticky)                                                        │
+│                                                                              │
+│ [🦅 APHELION]  [Hub] [Screener] [Research] [Watchlist] [Settings]           │
+│                              [🔍 Search tickers or news...]  [🔔 3] [👤]    │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+MARKET STATUS BAR (32px, below topbar, color-coded by session)
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ 🟢 MARKET OPEN  │  SPY 598.23 ▲0.4%  QQQ 512.10 ▼0.1%  VIX 18.4 ▲5.2%   │
+│                 │  Last sync: 8s ago  │  4 new recs  │  12 new articles     │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+**Nav tabs:**
+- **Hub** — the primary landing page (news + recs combined)
+- **Screener** — filter/scan recommendation engine
+- **Research** — deep analysis on a specific ticker
+- **Watchlist** — manage lists, set alerts
+- **Settings** — sources, thresholds, preferences
+
+---
+
+## PAGE 1: Hub (Primary Landing View)
+
+**Layout philosophy:** Two equal primary columns. Left = live news stream. Right = AI recommendation engine. Both always visible. No sidebars eating space.
+
+```
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ TOPBAR                                                                        │
+│ MARKET STATUS BAR                                                             │
+├──────────────────────────────────────────────────────────────────────────────┤
+│                                                                               │
+│   ┌── HUB SUBHEADER ────────────────────────────────────────────────────┐   │
+│   │  [📰 All News ▾]  [Watchlist Only ○]  [🔴 HIGH ○][🟡 MED ○]         │   │
+│   │  [Today ▾]  [Options-Related ○]         ···        [⚙ Layout]       │   │
+│   └─────────────────────────────────────────────────────────────────────┘   │
+│                                                                               │
+├──────────────────────────────┬───────────────────────────────────────────────┤
+│                              │                                               │
+│  LEFT COLUMN                 │  RIGHT COLUMN                                 │
+│  NEWS + SENTIMENT            │  RECOMMENDATIONS + SIGNALS                    │
+│  (50% width)                 │  (50% width)                                  │
+│                              │                                               │
+│ ┌──────────────────────────┐ │ ┌────────────────────────────────────────┐   │
+│ │ 🤖 AI CATALYST DIGEST    │ │ │ 🔥 TODAY'S TOP PICKS  [Refresh ↺]     │   │
+│ │ ─────────────────────── │ │ │ ─────────────────────────────────────  │   │
+│ │ Generated 4m ago for    │ │ │ Sorted by: [Score ▾]   4 recs today    │   │
+│ │ your watchlist + scans  │ │ └────────────────────────────────────────┘   │
+│ │                         │ │                                               │
+│ │ 📌 AAPL — 🟢 Bullish    │ │ ┌────────────────────────────────────────┐   │
+│ │ Goldman upgrade + sweep │ │ │ ┌──────────┐  ┌──────────┐             │   │
+│ │ activity → IV favorable │ │ │ │🔥 HIGH   │  │🔥 HIGH   │             │   │
+│ │ for Apr calls. Watch    │ │ │ │          │  │          │             │   │
+│ │ pre-earnings Apr 9.     │ │ │ │ AAPL     │  │ NVDA     │             │   │
+│ │   [AAPL 195C →]        │ │ │ │ Apr 195C │  │ May 900C │             │   │
+│ │                         │ │ │ │          │  │          │             │   │
+│ │ 📌 NVDA — 🟢 Bullish    │ │ │ │ 87/100   │  │ 83/100   │             │   │
+│ │ Earnings beat, IV will  │ │ │ │ ⭐⭐⭐⭐⭐  │  │ ⭐⭐⭐⭐⭐  │             │   │
+│ │ crush post-announce.    │ │ │ │          │  │          │             │   │
+│ │ Spread or naked call.   │ │ │ │ $2.45 ask│  │ $8.10 ask│             │   │
+│ │   [NVDA 900C →]        │ │ │ │ DTE: 37  │  │ DTE: 65  │             │   │
+│ │                         │ │ │ │          │  │          │             │   │
+│ │ 📌 TLT — ⚖️ Neutral     │ │ │ │[Research]│  │[Research]│             │   │
+│ │ Fed hold removes cut    │ │ │ │[▶ TOS]   │  │[▶ TOS]   │             │   │
+│ │ catalyst. Wait for 10Y  │ │ │ └──────────┘  └──────────┘             │   │
+│ │ direction before entry. │ │ │                                         │   │
+│ │                         │ │ │ ┌──────────┐  ┌──────────┐             │   │
+│ │ [Regenerate] [Expand ▾] │ │ │ │📊 MEDIUM │  │📊 MEDIUM │             │   │
+│ └──────────────────────── ┘ │ │ │          │  │          │             │   │
+│                              │ │ │ SPY      │  │ META     │             │   │
+│ ┌──────────────────────────┐ │ │ │ Apr 580P │  │ May 580C │             │   │
+│ │ 📰 LIVE NEWS FEED        │ │ │ │          │  │          │             │   │
+│ │                          │ │ │ │ 76/100   │  │ 71/100   │             │   │
+│ │ Sources: [All ▾]         │ │ │ │ ⭐⭐⭐⭐   │  │ ⭐⭐⭐⭐   │             │   │
+│ │                          │ │ │ │          │  │          │             │   │
+│ │ ┌──────────────────────┐ │ │ │ │ $3.20 ask│  │ $4.60 ask│             │   │
+│ │ │🔴 BREAKING  │ 2m ago │ │ │ │ │ DTE: 23  │  │ DTE: 65  │             │   │
+│ │ │Fed holds rates at    │ │ │ │ │          │  │          │             │   │
+│ │ │5.25-5.50% — Reuters │ │ │ │ │[Research]│  │[Research]│             │   │
+│ │ │[SPY][TLT][GLD][RATES]│ │ │ │ │[▶ TOS]   │  │[▶ TOS]   │             │   │
+│ │ │🤖 Triggered: SPY 580P│ │ │ └──────────┘  └──────────┘             │   │
+│ │ │   rec (#3 above)     │ │ │                                         │   │
+│ │ └──────────────────────┘ │ │ [View All in Screener →]               │   │
+│ │                          │ └────────────────────────────────────────┘   │
+│ │ ┌──────────────────────┐ │ │                                               │
+│ │ │🔴 HIGH     │ 8m ago  │ │ │ ┌────────────────────────────────────────┐   │
+│ │ │NVDA Q4 beats by 18%  │ │ │ │ 📊 SECTOR PULSE (24h)                  │   │
+│ │ │— Bloomberg           │ │ │ │ ─────────────────────────────────────  │   │
+│ │ │[NVDA][AMD][SEMIS]    │ │ │ │  Tech    🟢 +0.72  ████████████░░░░   │   │
+│ │ │🤖 Triggered: NVDA    │ │ │ │  Finance 🟢 +0.45  ████████░░░░░░░░   │   │
+│ │ │   900C rec (#2)      │ │ │ │  Energy  ⚖️ +0.08  ████░░░░░░░░░░░░   │   │
+│ │ └──────────────────────┘ │ │ │  Health  🔴 -0.31  ░░░░░░░░░░░░░░░░   │   │
+│ │                          │ │ │  Macro   🔴 -0.55  ░░░░░░░░░░░░░░░░   │   │
+│ │ ┌──────────────────────┐ │ │ │ ─────────────────────────────────────  │   │
+│ │ │🟡 MED      │ 22m ago │ │ │ │ Trending: NVDA(47) AAPL(31) TSLA(22) │   │
+│ │ │VIX spikes above 20   │ │ │ │ [Drill into sector →]                 │   │
+│ │ │— CNBC                │ │ │ └────────────────────────────────────────┘   │
+│ │ │[VIX][SPY][QQQ]       │ │ │                                               │
+│ │ │⚠️ Hedging conditions  │ │ │ ┌────────────────────────────────────────┐   │
+│ │ └──────────────────────┘ │ │ │ ⚡ ACTIVE ALERTS (3)                    │   │
+│ │                          │ │ │ ─────────────────────────────────────  │   │
+│ │ ┌──────────────────────┐ │ │ │ AAPL IV Rank crossed 70  [View →]     │   │
+│ │ │🔴 HIGH     │ 45m ago │ │ │ │ VIX > 20 threshold hit  [View →]      │   │
+│ │ │TSLA China Q1 miss    │ │ │ │ NVDA: Earnings beat news [View →]     │   │
+│ │ │— Reuters             │ │ │ │ [Manage Alerts →]                     │   │
+│ │ │[TSLA]                │ │ │ └────────────────────────────────────────┘   │
+│ │ │🔴 Watch puts         │ │ │                                               │
+│ │ └──────────────────────┘ │ │                                               │
+│ │                          │ │                                               │
+│ │ [Load More ▾]           │ │                                               │
+│ └──────────────────────────┘ │                                               │
+│                              │                                               │
+└──────────────────────────────┴───────────────────────────────────────────────┘
+```
+
+---
+
+## News Item Anatomy (Expanded)
+
+Each news item in the feed has a critical feature: **"🤖 Triggered:" tag** — showing which recommendation was generated or reinforced by this article. This closes the loop between news and recs in real-time.
+
+```
+┌──────────────────────────────────────────────────────────────────┐
+│ 🔴 BREAKING                                          2m ago      │
+│                                                                  │
+│ Fed holds rates at 5.25-5.50% — confirms pause through Q2       │
+│ Source: Reuters  |  Full article ↗                              │
+│                                                                  │
+│ Tickers: [SPY] [TLT] [GLD] [RATES] [DXY]                       │
+│                                                                  │
+│ 🤖 AI Signal:  Triggered ► SPY Apr 580P  (rec #3, score: 76)    │
+│                Reinforces ► TLT neutral hold                    │
+│                                                                  │
+│ Sentiment: ⚖️ Neutral equities  |  🔴 Bearish bonds             │
+│                                                                  │
+│ [Save] [Hide] [Research Tickers ▶] [Open in Screener ▶]        │
+└──────────────────────────────────────────────────────────────────┘
+```
+
+**Collapsed (default, single-line density):**
+```
+🔴  Fed holds rates... — Reuters — [SPY][TLT]  🤖→SPY 580P  2m ▾
+```
+
+Toggle between dense-list and expanded-card view.
+
+---
+
+## Recommendation Card Anatomy
+
+Cards are the heart of the right column. Each card is self-contained — you can decide right from the card without drilling into research.
+
+```
+┌────────────────────────────────────────┐
+│ 🔥 HIGH CONVICTION            87/100   │
+│ ████████████████████░░░ (score bar)    │
+├────────────────────────────────────────┤
+│ AAPL                                   │
+│ Apr 18 · $195 Call                     │
+│ ⭐⭐⭐⭐⭐                               │
+├────────────────────────────────────────┤
+│ Ask:    $2.45      DTE:  37 days       │
+│ Break:  $197.45    IV Rk: 68           │
+│ Max Loss: $245/contract                │
+├────────────────────────────────────────┤
+│ WHY NOW:                               │
+│ GS upgrade + call sweep +              │
+│ IV rank elevated → favorable setup     │
+│ ⚠️ Earnings Apr 9 (pre-exp binary)     │
+├────────────────────────────────────────┤
+│ Catalysts:                             │
+│ 📰 GS raises PT to $215    14m ago     │
+│ 📰 $5M call sweep detected  3h ago     │
+├────────────────────────────────────────┤
+│ [Research ▶]         [▶ Copy TOS]      │
+└────────────────────────────────────────┘
+```
+
+**Key design choice:** "WHY NOW" and catalyst news links are *inside the card* — users get the 80% they need without clicking Research. Research is for the 20% who want to verify.
+
+---
+
+## PAGE 2: Research (Drill-Down — accessed from Hub cards/news)
+
+Research is accessed via the **[Research ▶]** button on any card or news item — not a top-level landing page. The URL is `/research/AAPL` and it's fully bookmark-able.
+
+```
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ TOPBAR   [← Back to Hub]                                                      │
+│ MARKET STATUS BAR                                                             │
+├──────────────────────────────────────────────────────────────────────────────┤
+│ TICKER HERO STRIP                                                             │
+│ ┌─────────────────────────────────────────────────────────────────────────┐  │
+│ │ AAPL    Apple Inc.              $191.42  ▲ +$3.82  (+2.03%)  NASDAQ    │  │
+│ │ Mkt Cap: $2.89T  |  Vol: 58M  |  52W: $164–$199  |  P/E: 31.2         │  │
+│ │ [⭐ Watch] [🔔 Alert] [↗ Open in TOS] [Share Analysis]                 │  │
+│ └─────────────────────────────────────────────────────────────────────────┘  │
+├──────────────────────────────────────────────────────────────────────────────┤
+│ TAB BAR (within Research page)                                                │
+│ [Overview ●] [Options Chain] [P&L Simulator] [News] [Thesis Builder]          │
+├──────────────────────────────────────────────────────────────────────────────┤
+│                                                                               │
+│ TAB: OVERVIEW                                                                 │
+│                                                                               │
+├──────────────────────────────┬───────────────────────────────────────────────┤
+│ CHART (55%)                  │ SIGNAL BREAKDOWN (45%)                         │
+│                              │                                                │
+│ [1D][1W][1M][3M]             │ APHELION SCORE: 87/100                        │
+│ [MA50 ✓][BB ✓][Vol ✓]       │ ┌──────────────────────────────────────────┐  │
+│                              │ │ Momentum         ████████░░  78%  ↑     │  │
+│  ┌────────────────────────┐  │ │ IV Analysis      ███████░░░  70%  ↑     │  │
+│  │                        │  │ │ News Sentiment   █████████░  88%  ↑     │  │
+│  │  [Price Chart]         │  │ │ Earnings Risk    ████░░░░░░  40%  ⚠     │  │
+│  │                        │  │ │ Technical Setup  ████████░░  80%  ↑     │  │
+│  │  /\/\/──────/\/────    │  │ │ Options Flow     ███████░░░  72%  ↑     │  │
+│  │                        │  │ └──────────────────────────────────────────┘  │
+│  │  ══════════ 50MA       │  │                                                │
+│  └────────────────────────┘  │ THESIS (auto-generated):                      │
+│                              │ ┌──────────────────────────────────────────┐  │
+│ KEY METRICS                  │ │ Strong momentum confirmed by MA breakout. │  │
+│ ┌────────┬────────┬────────┐ │ │ IV Rank at 68 — elevated but not          │  │
+│ │ IV 26% │ IVRk68 │ HV 22% │ │ │ overpriced for calls. Goldman upgrade +   │  │
+│ ├────────┼────────┼────────┤ │ │ $5M sweep confirm institutional bullish   │  │
+│ │ Vol 58M│ OI 234k│ P/E 31 │ │ │ bias. Earnings Apr 9 is a binary risk —  │  │
+│ └────────┴────────┴────────┘ │ │ consider position sizing accordingly.     │  │
+│                              │ │ Score: 87/100 — HIGH CONVICTION           │  │
+│ GREEKS (for selected strike) │ └──────────────────────────────────────────┘  │
+│ ┌──────────────────────────┐ │                                                │
+│ │ Δ: +0.42   Γ: +0.08     │ │ UPCOMING CATALYSTS                            │
+│ │ θ: -$0.18  ν: +$0.31    │ │ ┌──────────────────────────────────────────┐  │
+│ └──────────────────────────┘ │ │ ⚡ Apr 9  Q2 Earnings (pre-expiry)        │  │
+│                              │ │ 📅 Apr 4  Spring product event            │  │
+│ CATALYST TIMELINE            │ │ 📊 Mar 18 FOMC (indirect)                 │  │
+│ ─────────────────────────   │ └──────────────────────────────────────────┘  │
+│ Now──Mar18──Apr4──Apr9──Exp │ │                                                │
+│      FOMC  Prod  Earn  Apr18│ │ [Save Thesis]  [Share]  [Export to TOS ▶]   │  │
+└──────────────────────────────┴───────────────────────────────────────────────┘
+```
+
+---
+
+## Research Tab: Options Chain
+
+```
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ OPTIONS CHAIN                                                                 │
+│                                                                               │
+│ Expiration: [Mar 21 ▾] [Apr 4] [Apr 18 ●] [May 16] [Jun 20]               │
+│ Show: [Calls + Puts ●] [Calls only] [Puts only]   [Highlight ITM ●]        │
+│ DTE: 37 days  |  Earnings: Apr 9 (pre-expiry)  |  IV: 26%                  │
+│                                                                              │
+│ ┌─────────────────────────────┬──────────┬─────────────────────────────────┐│
+│ │           CALLS             │  Strike  │            PUTS                 ││
+│ │  OI    Vol   Bid   Ask   Δ  │          │  Δ    Ask   Bid   Vol    OI     ││
+│ ├─────────────────────────────┼──────────┼─────────────────────────────────┤│
+│ │  8.4k  1.2k  7.20  7.35 .72│  $185    │-.28  1.15  1.05  0.8k   4.2k  ││
+│ │ 12.1k  2.1k  3.80  3.95 .58│  $190    │-.42  2.55  2.40  1.4k   7.8k  ││
+│ │ ████████████████████████████│          │████████████████████████████████ ││  ← ITM/OTM divider
+│ │●15.2k  3.3k  1.85  2.00 .42│  $195 ←● │-.58  4.35  4.20  2.1k   5.1k  ││  ← RECOMMENDED
+│ │  9.8k  1.8k  0.75  0.85 .28│  $200    │-.72  7.45  7.30  1.1k   3.4k  ││
+│ │  6.1k  0.9k  0.25  0.32 .14│  $205    │-.85 11.20 11.00  0.4k   1.8k  ││
+│ └─────────────────────────────┴──────────┴─────────────────────────────────┘│
+│                                                                               │
+│ Selected: AAPL Apr 18 $195 Call  |  Ask: $2.00  |  Delta: 0.42  |  IV: 26% │
+│ [Use in P&L Simulator →]   [Copy TOS Symbol: .AAPL240418C195]               │
+└──────────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## Research Tab: P&L Simulator
+
+```
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ P&L SIMULATOR — AAPL Apr 18 $195 Call                                        │
+│                                                                               │
+│ CONTROLS                                                                      │
+│ ┌──────────────────────────────────────────────────────────────────────────┐ │
+│ │  Stock Price  [$180 ──────────────●──────── $220]    Current: $191.42   │ │
+│ │  Scenario:    [$195.00]                                                  │ │
+│ │                                                                          │ │
+│ │  Days to Exp  [37 ●──────────────────── 0 ]          Now: 37 DTE        │ │
+│ │  Scenario:    [20 DTE]                                                   │ │
+│ │                                                                          │ │
+│ │  IV Change    [-20% ────────●────────── +20%]        Current IV: 26%    │ │
+│ │  Scenario:    [+0%]                                                      │ │
+│ └──────────────────────────────────────────────────────────────────────────┘ │
+│                                                                               │
+│ RESULT DASHBOARD                                                              │
+│ ┌────────────────┬────────────────┬────────────────┬────────────────────────┐│
+│ │ Option Price   │ P&L per Contr  │ % Return       │ Breakeven              ││
+│ │ $2.45         │ +$340          │ +139%          │ $197.45 at exp         ││
+│ └────────────────┴────────────────┴────────────────┴────────────────────────┘│
+│                                                                               │
+│ SCENARIO COMPARISON TABLE                                                     │
+│ ┌──────────────────┬──────────┬──────────┬──────────┬───────────────────────┐│
+│ │ Scenario         │ Stock $  │ DTE Left │ IV Δ     │ Est P&L               ││
+│ ├──────────────────┼──────────┼──────────┼──────────┼───────────────────────┤│
+│ │ Bull Run         │ +5%      │ 30 DTE   │ +0%      │ +$580  (+237%)  🟢    ││
+│ │ Current Settings │ $195     │ 20 DTE   │ +0%      │ +$340  (+139%)  🟢    ││
+│ │ IV Crush (post-E)│ +3%      │ 10 DTE   │ -30%     │ +$110  (+45%)   🟡    ││
+│ │ Flat/No movement │ $191     │ 37 DTE   │ +0%      │ -$60   (-24%)   🔴    ││
+│ │ Max Loss         │ < $195   │ 0 DTE    │ any      │ -$245  (-100%)  🔴    ││
+│ └──────────────────┴──────────┴──────────┴──────────┴───────────────────────┘│
+│                                                                               │
+│ [Export to TOS: .AAPL240418C195]                                             │
+└──────────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## Research Tab: News (Ticker-Filtered)
+
+```
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ NEWS — AAPL                                                                   │
+│ [All] [Analyst Ratings] [Earnings] [Options Flow] [SEC Filings] [Social]     │
+│ ─────────────────────────────────────────────────────────────────────────── │
+│                                                                               │
+│ 🟢 GS upgrades AAPL to Buy, raises PT $185→$215        14m · Goldman Sachs  │
+│    Sentiment: 🟢 Strongly Bullish  |  Impact: HIGH  |  Signal: BULLISH       │
+│    "Services growth acceleration + AI cycle ramp justify premium multiple"    │
+│    [Full Article ↗]                                                          │
+│ ─────────────────────────────────────────────────────────────────────────── │
+│ 🟢 Unusual: $5M+ in Apr 200C purchased at ask, 3 sweeps   3h · UW           │
+│    Sentiment: 🟢 Bullish  |  Impact: HIGH  |  Signal: INSTITUTIONAL BUYING   │
+│    [Full Article ↗]                                                          │
+│ ─────────────────────────────────────────────────────────────────────────── │
+│ ⚖️ Apple + TSMC finalize 2nm chip production for iPhone 17     2h · Reuters  │
+│    Sentiment: 🟢 Mildly Bullish  |  Impact: MED  |  Signal: SUPPLY CHAIN    │
+│    [Full Article ↗]                                                          │
+│ ─────────────────────────────────────────────────────────────────────────── │
+│ ⚠️ Apple earnings scheduled Apr 9 — pre-exp for Apr 18 contracts   Official  │
+│    Note: Binary event within option lifecycle — consider sizing.             │
+└──────────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## PAGE 3: Screener (Filter + Scan)
+
+Secondary to Hub but important for power users who want to query the recommendation engine directly.
+
+```
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ TOPBAR                                                                        │
+├──────────────────────────────────────────────────────────────────────────────┤
+│ SCREENER                                    [▶ Run Scan]  [Last: 3m ago]     │
+├──────────────────────────────────────────────────────────────────────────────┤
+│ FILTER PANEL (collapsible, defaults open)                                     │
+│ ┌──────────────────────────────────────────────────────────────────────────┐ │
+│ │ Sectors:   [All ▾]   [Tech ✓] [Finance] [Energy] [Health] [Macro]        │ │
+│ │ Strategy:  [All ▾]   [Long Call] [Long Put] [Bull Spread] [Bear Spread]  │ │
+│ │ DTE:       [Min 14 ─────────────●──────────── Max 60]                   │ │
+│ │ IV Rank:   [Min 0 ────────────────────●────── Max 100]  >40 selected    │ │
+│ │ Min Score: [0 ────────────────────────●─────]  >70 selected             │ │
+│ │                                        [Reset Filters]  [Save Preset ⭐] │ │
+│ └──────────────────────────────────────────────────────────────────────────┘ │
+│                                                                               │
+│ RESULTS  (14 matches)                   Sort: [Score ▾]   [🔴 4] [🟡 6] [🟢 4]│
+│ ┌──────┬────────────────────────┬───────┬────────┬──────┬──────┬────────────┐│
+│ │ Score│ Trade                  │ Type  │ DTE    │ IV Rk│ Est  │            ││
+│ ├──────┼────────────────────────┼───────┼────────┼──────┼──────┼────────────┤│
+│ │  ●87 │ 🔥 AAPL Apr 195C      │ Long C│ 37d    │  68  │+$340 │[Research ▶]││
+│ │  ●83 │ 🔥 NVDA May 900C      │ Long C│ 65d    │  74  │+$510 │[Research ▶]││
+│ │  ●76 │ 📊 SPY Apr 580P       │ Long P│ 23d    │  55  │+$180 │[Research ▶]││
+│ │  ●71 │ 📊 META May 580C      │ Long C│ 65d    │  48  │+$220 │[Research ▶]││
+│ │  ●68 │ 📊 TSLA Apr 200P      │ Long P│ 23d    │  62  │+$290 │[Research ▶]││
+│ │  ●65 │ 📊 AMZN Apr 195C Spr  │ Spread│ 37d    │  51  │+$140 │[Research ▶]││
+│ └──────┴────────────────────────┴───────┴────────┴──────┴──────┴────────────┘│
+│                                                                               │
+│ INLINE SIGNAL BREAKDOWN (click row to expand)                                 │
+│ ▼ AAPL Apr 195C — expanded                                                   │
+│ ┌──────────────────────────────────────────────────────────────────────────┐ │
+│ │ Momentum 78%  IV 70%  Sentiment 88%  Earnings Risk 40%  Tech 80%  Flow 72%│ │
+│ │ Thesis: GS upgrade + call sweep + IV rank at 68 = high confidence setup.  │ │
+│ │ Risk: Earnings Apr 9 (pre-expiry binary). Size accordingly.               │ │
+│ │         [Research ▶]       [Copy TOS Symbol: .AAPL240418C195]            │ │
+│ └──────────────────────────────────────────────────────────────────────────┘ │
+│                                                                               │
+│ [← Prev]  Page 1 of 2  [Next →]                [Export All as CSV]          │
+└──────────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## PAGE 4: Watchlist
+
+```
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ TOPBAR                                                                        │
+├──────────────────────────────────────────────────────────────────────────────┤
+│ WATCHLIST                                              [+ New List] [+ Ticker]│
+├──────────────────────────────────────┬───────────────────────────────────────┤
+│ LIST SIDEBAR (240px)                 │ LIST CONTENTS                          │
+│                                      │                                        │
+│ ┌──────────────────────────────────┐ │ My Lists > Tech Plays                 │
+│ │ ● Tech Plays              5      │ │ ─────────────────────────────────     │
+│ │ ○ Macro Hedges            3      │ │ AAPL ▲ 2.03%  🔥87  IV:68  [→]      │
+│ │ ○ Earnings Plays          4      │ │ NVDA ▲ 0.82%  🔥83  IV:74  [→]      │
+│ │ ○ Watchlist (uncat)      12      │ │ META ▲ 1.10%  📊71  IV:48  [→]      │
+│ │ + New List               [+]     │ │ GOOGL▲ 0.95%  📊68  IV:42  [→]      │
+│ └──────────────────────────────────┘ │ MSFT ▼ 0.22%  📊65  IV:39  [→]      │
+│                                      │                                        │
+│ ALERT SUMMARY                        │ [+ Add Ticker]                        │
+│ ┌──────────────────────────────────┐ │                                        │
+│ │ 3 active alerts                  │ │ ALERT PANEL (for list)                │
+│ │ ⚡ AAPL IV Rank > 70  [Edit]     │ │ ┌─────────────────────────────────┐  │
+│ │ ⚡ VIX > 20           [Edit]     │ │ │ Alerts for Tech Plays:          │  │
+│ │ ⚡ NVDA earn news     [Edit]     │ │ │ AAPL: IV Rank > 70  ✓ ACTIVE   │  │
+│ │ + Add Alert           [+]        │ │ │ NVDA: Price > 900   ○ inactive  │  │
+│ └──────────────────────────────────┘ │ │ [+ Add alert for list]          │  │
+│                                      │ └─────────────────────────────────┘  │
+└──────────────────────────────────────┴───────────────────────────────────────┘
+```
+
+---
+
+## ThinkOrSwim Export Flow
+
+The single most important integration. Zero friction between APHELION's recommendation and TOS order entry.
+
+```
+[▶ Copy TOS] button on any card/row
+│
+├─→ Copies: .AAPL240418C195  to clipboard
+│
+├─→ Toast appears:
+│   ┌──────────────────────────────────────────────────────┐
+│   │ ✅ Copied: .AAPL240418C195                           │
+│   │ In TOS: Trade tab → Symbol field → paste → enter    │
+│   │ [Show TOS Guide ↗]                   [Dismiss ✕]   │
+│   └──────────────────────────────────────────────────────┘
+│
+└─→ Optional deep link (if TOS supports):
+    thinkorswim://symbol=.AAPL240418C195
+```
+
+**TOS Symbol Format Reference:**
+```
+Equity option:  .AAPL240418C195   → AAPL Apr 18 2024 $195 Call
+                .AAPL240418P185   → AAPL Apr 18 2024 $185 Put
+ETF option:     .SPY240404P580    → SPY Apr 4 2024 $580 Put
+```
+
+---
+
+## Interaction States & Micro-UX
+
+### News Item States
+```
+Default:    Normal text, muted timestamp
+New (<5m):  Subtle pulse border (var --bull), "NEW" badge
+Breaking:   Orange left border (#FF6B35), bold headline
+Read:       Slightly dimmed (opacity 0.7)
+Saved:      Bookmark icon filled violet
+```
+
+### Recommendation Card States
+```
+Default:    Standard card
+Hover:      Elevate (scale 1.01), shadow increase
+Expanded:   Card expands to show full signal breakdown
+Saved:      Star icon filled, subtle violet glow border
+Acted on:   "Exported to TOS" badge appears
+Expired:    DTE = 0, card grays out, moves to bottom
+```
+
+### Score Bar Animation
+```
+On mount:   Width animates 0% → actual% in 600ms ease-out
+Color:      <40 red, 40-69 amber, 70-84 blue, 85+ green
+```
+
+### Loading States
+```
+News feed loading:    Skeleton shimmer (3 items)
+Recs loading:         Skeleton cards (2x2 grid)
+Chart loading:        Spinner centered in chart area
+Score calculating:    "Analyzing..." pulse on score display
+```
+
+---
+
+## Responsive Breakpoints
+
+| Screen | Hub Layout | Notes |
+|--------|-----------|-------|
+| >1440px | 50/50 news + recs, full cards | Optimal desktop |
+| 1024-1440 | 55/45 news + recs, compact cards | Laptop |
+| 768-1024 | Tabs: [News] [Recs] toggle | Tablet |
+| <768 | Stacked: Digest → Recs → News feed | Mobile |
+
+**Mobile priority order:** AI Digest → Rec cards → News feed  
+(Most actionable info at the top on small screens)
+
+---
+
+## Tech Stack (Final Recommendation)
+
+**Frontend:**
+- React 18 + TypeScript (strict)
+- TailwindCSS v3 (token system above maps directly)
+- TradingView Lightweight Charts (price charts — free, professional)
+- Recharts (score bars, sector sentiment, P&L charts)
+- Radix UI (dropdowns, modals, tabs — accessible)
+- React Query v5 (data fetching, background refresh)
+- Zustand (global state: watchlist, filters, alerts)
+- Framer Motion (card animations, panel transitions)
+- react-hot-toast (alert toasts, TOS copy confirmation)
+
+**Key UX Libraries:**
+- @tanstack/react-table (screener table, options chain)
+- react-window (virtualized news feed for performance)
+- date-fns (DTE calculations, timestamp formatting)
+
+**State Architecture:**
+```
+Global (Zustand):
+  - watchlists[]
+  - activeAlerts[]
+  - userPreferences{}
+  - marketStatus
+
+Server Cache (React Query):
+  - news feed (refresh: 30s)
+  - recommendations (refresh: 5m or on-demand)
+  - quote prices (refresh: 15s)
+  - options chains (refresh: 1m)
+  - sector sentiment (refresh: 1h)
+```
+
+---
+
+## Data Requirements for Backend Rex
+
+| Feature | Suggested Source | Refresh | Notes |
+|---------|-----------------|---------|-------|
+| Price quotes | Yahoo Finance (yfinance) or Polygon.io | 15s | Free tier OK for 15m delay |
+| Options chain | Tradier API or Tastytrade | 1–5m | Tradier has free paper trading tier |
+| News feed | NewsAPI + Benzinga + RSS | Real-time | NewsAPI free = 100 req/day; paid for prod |
+| Sentiment NLP | Run locally (FinBERT or similar) | Per article | No API cost |
+| Recommendation scores | Quant Rex algorithm output | On-demand + scheduled | Internal |
+| IV Rank | Compute from options history | Daily | Store 52-week options data |
+| Unusual options flow | Unusual Whales API (~$50/mo) or scrape | Near real-time | Optional — flag for APHELION |
+| Sector aggregation | Computed from ticker prices + news | Hourly | Internal |
+| TOS symbol formatting | Pure computation | n/a | No API needed |
+
+---
+
+## Open Questions (Reduced — APHELION confirmed layout)
+
+1. **Real-time vs 15m delayed data?** Real-time options requires paid API ($50–200/mo). 15m delayed is often free. Which is OK?
+2. **Unusual Whales integration?** (~$50/mo). Include or skip in v1?
+3. **Mobile priority?** If mainly desktop trading hours, mobile can be deprioritized in v1.
+4. **Number of news sources?** NewsAPI free tier limits requests — define source list for v1.
+5. **P&L simulator multi-leg?** v1 = single-leg only (call, put). Spreads in v2?
+6. **AI Digest model?** Which LLM powers the catalyst digest? Local (Ollama) or API?
+
+---
+
+*v2.0 — Revised per APHELION layout confirmation (News + Recommendation Hub primary, Research drill-down secondary)*
+*UI Rex | 2026-03-12 | Pending Quant Rex algo spec + Backend Rex implementation*

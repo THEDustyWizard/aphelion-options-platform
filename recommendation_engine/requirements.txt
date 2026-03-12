@@ -1,0 +1,49 @@
+# APHELION Recommendation Engine Requirements
+# Quant Rex Implementation
+
+# Core dependencies
+numpy>=1.21.0
+pandas>=1.3.0
+scipy>=1.7.0
+
+# Data acquisition
+yfinance>=0.1.70
+requests>=2.26.0
+
+# Machine learning (future enhancements)
+scikit-learn>=1.0.0
+# tensorflow>=2.7.0  # Optional for advanced models - install separately if needed
+
+# Natural language processing
+nltk>=3.6.0
+textblob>=0.17.1
+
+# Visualization
+matplotlib>=3.4.0
+seaborn>=0.11.0
+plotly>=5.3.0
+
+# Database
+sqlalchemy>=1.4.0
+psycopg2-binary>=2.9.0  # For PostgreSQL
+
+# API and web
+fastapi>=0.70.0
+uvicorn>=0.15.0
+pydantic>=1.8.0
+
+# Testing
+pytest>=6.2.0
+pytest-cov>=3.0.0
+
+# Development
+black>=21.0.0
+flake8>=4.0.0
+mypy>=0.910
+
+# Documentation
+sphinx>=4.0.0
+sphinx-rtd-theme>=1.0.0
+
+# Schwab API integration (future)
+# schwab-py>=1.0.0  # Install separately when Schwab credentials are configured

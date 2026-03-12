@@ -1,0 +1,1 @@
+{"version":3,"file":"sector.model.d.ts","sourceRoot":"","sources":["../../src/models/sector.model.ts"],"names":[],"mappings":"AACA,OAAO,EAAE,UAAU,EAAE,MAAM,eAAe,CAAC;AAE3C,qBACa,MAAO,SAAQ,UAAU;IAEpC,IAAI,EAAG,MAAM,CAAC;IAGd,WAAW,CAAC,EAAE,MAAM,CAAC;IAGrB,SAAS,CAAC,EAAE,MAAM,CAAC;IAGnB,MAAM,EAAG,OAAO,CAAC;CAClB"}
