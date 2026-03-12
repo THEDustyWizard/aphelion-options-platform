@@ -18,6 +18,7 @@ import ResearchPage from './pages/ResearchPage';
 import WatchlistPage from './pages/WatchlistPage';
 import NewsPage from './pages/NewsPage';
 import SettingsPage from './pages/SettingsPage';
+import PricingModelsPage from './pages/PricingModelsPage';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -53,6 +54,7 @@ export default function App() {
               <Route path="/watchlist"     element={<WatchlistPage />} />
               <Route path="/news"          element={<NewsPage />} />
               <Route path="/settings"      element={<SettingsPage />} />
+              <Route path="/pricing"       element={<PricingModelsPage />} />
             </Routes>
           </main>
 

@@ -27,8 +27,10 @@ export function registerRoutes(): Router {
   router.use('/news', newsRoutes);
   router.use('/portfolio', portfolioRoutes);
   router.use('/calculation', calculationRoutes);
+
+  // Schwab API — OAuth, live quotes, options chain, market data
   router.use('/schwab', schwabRoutes);
-  
+
   // Admin routes (protected)
   if (process.env.NODE_ENV !== 'production') {
     router.use('/admin', adminRoutes);

@@ -3,22 +3,160 @@ import { persist } from 'zustand/middleware';
 import type { WatchlistGroup, WatchlistAlert, MarketStatus, SchwabConnectionStatus } from '../types';
 import { mockWatchlists, mockMarketStatus } from '../data/mockData';
 
-// ─── Simple obfuscation for credential storage ────────────────────────────────
-// Note: This is obfuscation, not true encryption. For a production Electron app,
-// use node's crypto module or Keytar. This prevents casual localStorage inspection.
-function obfuscate(s: string): string {
-  if (!s) return '';
-  return btoa(
-    s.split('').map((c, i) => String.fromCharCode(c.charCodeAt(0) ^ ((i % 7) + 11))).join('')
-  );
+// ─── Schwab Store ─────────────────────────────────────────────────────────────
+
+export interface SchwabErrorEntry {
+  ts: string;
+  endpoint: string;
+  error: string;
+  code?: number;
 }
-function deobfuscate(s: string): string {
-  if (!s) return '';
-  try {
-    const decoded = atob(s);
-    return decoded.split('').map((c, i) => String.fromCharCode(c.charCodeAt(0) ^ ((i % 7) + 11))).join('');
-  } catch { return ''; }
+
+export interface SchwabProfile {
+  id: string;
+  name: string;
+  appKeyMasked: string;
+  callbackUrl: string;
+  environment: 'production' | 'sandbox';
+  isLive: boolean;
+  accountNumber?: string;
+  createdAt: string;
 }
+
+/** Light obfuscation for localStorage (not real encryption — backend handles real crypto) */
+const ob   = (s: string) => { try { return btoa(unescape(encodeURIComponent(s))); } catch { return s; } };
+const deob = (s: string) => { try { return decodeURIComponent(escape(atob(s)));   } catch { return s; } };
+
+interface SchwabStore {
+  // Obfuscated credential storage
+  _appKeyOb:    string;
+  _appSecretOb: string;
+  callbackUrl:  string;
+
+  // Connection status (hydrated from backend)
+  status:   SchwabConnectionStatus;
+  liveMode: boolean;
+
+  // Auto-refresh interval in seconds
+  refreshInterval: number;
+
+  // Saved profiles
+  profiles:        SchwabProfile[];
+  activeProfileId: string | null;
+
+  // In-memory error log (not persisted)
+  errorLog: SchwabErrorEntry[];
+
+  // Last successful Schwab data fetch
+  lastFetch: string | null;
+
+  // Rate limit tracking
+  rateLimitUsed: number;
+  rateLimitMax:  number;
+
+  // Session timeout in minutes (0 = disabled)
+  sessionTimeoutMins: number;
+
+  // ── Actions ──
+  saveCredentials:    (appKey: string, appSecret: string, callbackUrl: string) => void;
+  clearCredentials:   () => void;
+  getAppKey:          () => string;
+  getAppSecret:       () => string;
+  hasCredentials:     () => boolean;
+
+  setStatus:          (s: SchwabConnectionStatus) => void;
+  setLiveMode:        (v: boolean)  => void;
+  setRefreshInterval: (s: number)   => void;
+  setLastFetch:       (ts: string)  => void;
+  setRateLimits:      (used: number, max: number) => void;
+  setSessionTimeout:  (mins: number) => void;
+
+  addProfile:       (p: Omit<SchwabProfile, 'id' | 'createdAt'>) => void;
+  removeProfile:    (id: string) => void;
+  updateProfile:    (id: string, patch: Partial<SchwabProfile>) => void;
+  setActiveProfile: (id: string | null) => void;
+
+  addError:    (e: SchwabErrorEntry) => void;
+  clearErrors: () => void;
+}
+
+export const useSchwabStore = create<SchwabStore>()(
+  persist(
+    (set, get) => ({
+      _appKeyOb:    '',
+      _appSecretOb: '',
+      callbackUrl:  'https://127.0.0.1',
+
+      status: {
+        connected:     false,
+        authenticated: false,
+        message:       'SCHWAB API DISCONNECTED',
+      },
+      liveMode:        false,
+      refreshInterval: 30,
+
+      profiles:        [],
+      activeProfileId: null,
+
+      errorLog:           [],
+      lastFetch:          null,
+      rateLimitUsed:      0,
+      rateLimitMax:       120,
+      sessionTimeoutMins: 0,
+
+      saveCredentials: (appKey, appSecret, callbackUrl) =>
+        set({ _appKeyOb: ob(appKey), _appSecretOb: ob(appSecret), callbackUrl }),
+
+      clearCredentials: () =>
+        set({
+          _appKeyOb: '', _appSecretOb: '', callbackUrl: 'https://127.0.0.1',
+          status: { connected: false, authenticated: false, message: 'SCHWAB API DISCONNECTED' },
+          liveMode: false, lastFetch: null, activeProfileId: null,
+        }),
+
+      getAppKey:      () => deob(get()._appKeyOb),
+      getAppSecret:   () => deob(get()._appSecretOb),
+      hasCredentials: () => !!get()._appKeyOb,
+
+      setStatus:          (s)     => set({ status: s }),
+      setLiveMode:        (v)     => set({ liveMode: v }),
+      setRefreshInterval: (s)     => set({ refreshInterval: s }),
+      setLastFetch:       (ts)    => set({ lastFetch: ts }),
+      setRateLimits:      (u, m)  => set({ rateLimitUsed: u, rateLimitMax: m }),
+      setSessionTimeout:  (mins)  => set({ sessionTimeoutMins: mins }),
+
+      addProfile: (p) =>
+        set((s) => ({
+          profiles: [
+            ...s.profiles,
+            { ...p, id: crypto.randomUUID(), createdAt: new Date().toISOString() },
+          ],
+        })),
+
+      removeProfile:  (id)      => set((s) => ({ profiles: s.profiles.filter((p) => p.id !== id) })),
+      updateProfile:  (id, patch) =>
+        set((s) => ({ profiles: s.profiles.map((p) => p.id === id ? { ...p, ...patch } : p) })),
+      setActiveProfile: (id)   => set({ activeProfileId: id }),
+
+      addError:    (e) => set((s) => ({ errorLog: [e, ...s.errorLog].slice(0, 50) })),
+      clearErrors: ()  => set({ errorLog: [] }),
+    }),
+    {
+      name: 'aphelion-schwab',
+      // Exclude in-memory error log from localStorage
+      partialize: (s) => ({
+        _appKeyOb:          s._appKeyOb,
+        _appSecretOb:       s._appSecretOb,
+        callbackUrl:        s.callbackUrl,
+        liveMode:           s.liveMode,
+        refreshInterval:    s.refreshInterval,
+        profiles:           s.profiles,
+        activeProfileId:    s.activeProfileId,
+        sessionTimeoutMins: s.sessionTimeoutMins,
+      }),
+    }
+  )
+);
 
 // ─── Market Store ─────────────────────────────────────────────────────────────
 interface MarketStore {
@@ -74,12 +212,7 @@ export const useWatchlistStore = create<WatchlistStore>()(
                   ...g,
                   items: [
                     ...g.items,
-                    {
-                      ticker,
-                      companyName: ticker,
-                      price: 0,
-                      changePct: 0,
-                    },
+                    { ticker, companyName: ticker, price: 0, changePct: 0 },
                   ],
                 }
               : g
@@ -177,66 +310,3 @@ export const useScreenerStore = create<ScreenerStore>()((set) => ({
   setFilters: (f) => set((s) => ({ filters: { ...s.filters, ...f } })),
   resetFilters: () => set({ filters: defaultFilters }),
 }));
-
-// ─── Schwab API Store ─────────────────────────────────────────────────────────
-interface SchwabStore {
-  // Obfuscated credentials (persisted)
-  _appKeyEnc:    string;
-  _appSecretEnc: string;
-  callbackUrl:   string;
-  // Connection state (runtime only, not persisted)
-  status: SchwabConnectionStatus;
-  liveMode: boolean;
-  // Actions
-  saveCredentials: (appKey: string, appSecret: string, callbackUrl: string) => void;
-  getAppKey: () => string;
-  getAppSecret: () => string;
-  clearCredentials: () => void;
-  setStatus: (s: SchwabConnectionStatus) => void;
-  setLiveMode: (v: boolean) => void;
-  hasCredentials: () => boolean;
-}
-
-export const useSchwabStore = create<SchwabStore>()(
-  persist(
-    (set, get) => ({
-      _appKeyEnc:    '',
-      _appSecretEnc: '',
-      callbackUrl:   'https://127.0.0.1',
-      status: { connected: false, authenticated: false, message: 'NOT CONNECTED' },
-      liveMode: false,
-
-      saveCredentials: (appKey, appSecret, callbackUrl) =>
-        set({
-          _appKeyEnc:    obfuscate(appKey),
-          _appSecretEnc: obfuscate(appSecret),
-          callbackUrl,
-        }),
-
-      getAppKey:    () => deobfuscate(get()._appKeyEnc),
-      getAppSecret: () => deobfuscate(get()._appSecretEnc),
-
-      clearCredentials: () =>
-        set({
-          _appKeyEnc:    '',
-          _appSecretEnc: '',
-          callbackUrl:   'https://127.0.0.1',
-          status: { connected: false, authenticated: false, message: 'NOT CONNECTED' },
-          liveMode: false,
-        }),
-
-      setStatus: (s) => set({ status: s }),
-      setLiveMode: (v) => set({ liveMode: v }),
-      hasCredentials: () => !!get()._appKeyEnc,
-    }),
-    {
-      name: 'aphelion-schwab',
-      // Only persist credentials + callbackUrl, not runtime status
-      partialize: (s) => ({
-        _appKeyEnc:    s._appKeyEnc,
-        _appSecretEnc: s._appSecretEnc,
-        callbackUrl:   s.callbackUrl,
-      }),
-    }
-  )
-);

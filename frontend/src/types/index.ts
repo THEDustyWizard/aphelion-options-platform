@@ -86,6 +86,12 @@ export interface Recommendation {
   isSaved?: boolean;
   isActedOn?: boolean;
   calculationDetails?: CalculationDetails;
+  /** Automated sell signal data */
+  sellSignal?: SellSignal;
+  /** Confidence scoring breakdown */
+  confidenceBreakdown?: ConfidenceBreakdown;
+  /** Backtest performance statistics */
+  backtestStats?: BacktestStats;
   /** Live data from Schwab API when connected */
   liveData?: {
     bid: number;
@@ -234,6 +240,99 @@ export interface TradeSignals {
   profitTargetPct: number;
   /** Stop loss as % of premium */
   stopLossPct: number;
+}
+
+// ─── Sell Signals ─────────────────────────────────────────────────────────────
+
+export type SellSignalType = 'SELL_NOW' | 'TAKE_PROFITS' | 'CUT_LOSSES' | 'ROLL_POSITION' | 'HOLD';
+export type SellSignalUrgency = 'critical' | 'high' | 'medium' | 'low';
+
+export interface SellTrigger {
+  type: 'profit_target' | 'stop_loss' | 'time_decay' | 'technical' | 'fundamental';
+  label: string;
+  triggered: boolean;
+  value: number;
+  threshold: number;
+  description: string;
+}
+
+export interface SellSignal {
+  signal: SellSignalType;
+  urgency: SellSignalUrgency;
+  reason: string;
+  detail: string;
+  recommendation: string;
+  profitTarget: number;
+  stopLoss: number;
+  profitTargetPct: number;
+  stopLossPct: number;
+  rollWarningDte: number;
+  triggers?: SellTrigger[];
+  currentPnlPct?: number;
+}
+
+// ─── Confidence Scoring ───────────────────────────────────────────────────────
+
+export interface ConfidenceBreakdown {
+  technical: number;        // 30% weight — RSI, MACD, MAs
+  fundamental: number;      // 25% weight — P/E, P/B, dividend
+  sectorMomentum: number;   // 20% weight — sector-specific scoring
+  optionsMetrics: number;   // 15% weight — IV rank, skew, volume
+  marketConditions: number; // 10% weight — VIX, macro
+  total: number;            // 0-100
+  level: 'high' | 'medium' | 'low';
+}
+
+// ─── Portfolio Positions ──────────────────────────────────────────────────────
+
+export interface PortfolioPosition {
+  id: string;
+  recId: string;
+  ticker: string;
+  strategy: string;
+  strike: number;
+  expiry: string;
+  optionType: 'call' | 'put';
+  entryPrice: number;
+  currentPrice: number;
+  contracts: number;
+  entryDate: string;
+  costBasis: number;        // entryPrice × contracts × 100
+  currentValue: number;     // currentPrice × contracts × 100
+  pnl: number;              // currentValue - costBasis
+  pnlPct: number;           // pnl / costBasis × 100
+  sellSignal: SellSignal;
+  sector: 'defense' | 'energy' | 'logistics' | 'medical' | string;
+  confidenceAtEntry: number;
+  delta?: number;
+  theta?: number;
+  iv?: number;
+  status: 'open' | 'closed' | 'expired';
+}
+
+export interface PortfolioRiskMetrics {
+  totalValue: number;
+  totalCostBasis: number;
+  totalPnl: number;
+  totalPnlPct: number;
+  portfolioBeta: number;
+  sectorConcentration: Record<string, number>;  // sector → % allocation
+  openPositions: number;
+  alertCount: number;        // positions with SELL_NOW or CUT_LOSSES
+  avgDte: number;
+  maxPositionSize: number;   // largest single position %
+}
+
+// ─── Backtest Stats ───────────────────────────────────────────────────────────
+
+export interface BacktestStats {
+  winRate: number;           // 0-1 decimal
+  avgReturn: number;         // percentage
+  maxDrawdown: number;       // negative percentage
+  sharpeRatio: number;
+  sampleSize: number;        // number of historical trades analyzed
+  strategyLabel: string;
+  timeframe: string;         // e.g. "90-day lookback"
 }
 
 export interface CalculationDetails {

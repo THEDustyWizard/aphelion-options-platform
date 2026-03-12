@@ -1,6 +1,8 @@
 import type {
   Recommendation, NewsItem, AiDigest, SectorSentiment,
-  WatchlistGroup, MarketStatus, OptionExpiry, CalculationDetails
+  WatchlistGroup, MarketStatus, OptionExpiry, CalculationDetails,
+  SellSignal, ConfidenceBreakdown, BacktestStats,
+  PortfolioPosition, PortfolioRiskMetrics
 } from '../types';
 
 // ─── Shared helper: compute Black-Scholes d1/d2 inline for mock data ──────────

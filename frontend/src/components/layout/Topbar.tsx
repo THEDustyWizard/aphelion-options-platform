@@ -10,7 +10,8 @@ const NAV_LINKS = [
   { to: '/screener',  label: '[ SCREENER ]',   shortcut: 'F2' },
   { to: '/watchlist', label: '[ WATCHLIST ]',  shortcut: 'F3' },
   { to: '/news',      label: '[ INTEL ]',      shortcut: 'F4' },
-  { to: '/settings',  label: '[ CONFIG ]',     shortcut: 'F5' },
+  { to: '/pricing',   label: '[ PRICING ]',    shortcut: 'F5' },
+  { to: '/settings',  label: '[ CONFIG ]',     shortcut: 'F6' },
 ];
 
 export default function Topbar() {
