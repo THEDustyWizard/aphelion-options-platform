@@ -1,0 +1,86 @@
+#!/bin/bash
+# APHELION Options Platform Launcher
+# One command to start everything
+
+echo "🚀 Starting APHELION Options Platform..."
+
+# Check if we're in the right directory
+if [ ! -f "package.json" ]; then
+    echo "❌ Error: Run this from the aphelion-options-platform directory"
+    echo "Clone first: git clone https://github.com/THEDustyWizard/aphelion-options-platform.git"
+    exit 1
+fi
+
+# Check Node.js
+if ! command -v node &> /dev/null; then
+    echo "❌ Node.js not found. Install Node.js 18+ first:"
+    echo "   macOS: brew install node"
+    echo "   Linux: sudo apt install nodejs npm"
+    exit 1
+fi
+
+# Check Python
+if ! command -v python3 &> /dev/null; then
+    echo "❌ Python 3 not found. Installing via Homebrew..."
+    if command -v brew &> /dev/null; then
+        brew install python
+    else
+        echo "   Install Homebrew first: /bin/bash -c \"\$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)\""
+        echo "   Then: brew install python"
+        exit 1
+    fi
+fi
+
+# Install npm dependencies
+echo "📦 Installing npm dependencies..."
+npm install
+
+# Install Python dependencies
+echo "🐍 Installing Python dependencies..."
+cd recommendation_engine
+python3 -m pip install -r requirements.txt
+cd ..
+
+# Start services
+echo "🚀 Starting all services..."
+
+# Start backend (port 8000)
+echo "🔧 Starting backend on port 8000..."
+cd backend
+npm start &
+BACKEND_PID=$!
+cd ..
+
+# Start Quant Rex engine (port 8001)
+echo "🧠 Starting Quant Rex engine on port 8001..."
+cd recommendation_engine
+python3 engine_server.py &
+ENGINE_PID=$!
+cd ..
+
+# Start Electron app
+echo "🖥️ Starting Electron desktop app..."
+cd frontend
+npm run electron:dev &
+ELECTRON_PID=$!
+cd ..
+
+# Save PIDs to file
+echo $BACKEND_PID $ENGINE_PID $ELECTRON_PID > .aphelion_pids
+
+# Wait a bit for services to start
+echo "⏳ Waiting for services to start..."
+sleep 5
+
+# Check services
+echo "🔍 Checking services..."
+echo "Backend:    http://localhost:8000/health"
+echo "Engine:     http://localhost:8001/health"
+echo "Frontend:   http://localhost:5173"
+
+echo ""
+echo "✅ APHELION platform started!"
+echo "📊 All services should be running."
+echo ""
+echo "To stop everything: ./aphelion-stop"
+echo "Desktop window should appear shortly..."

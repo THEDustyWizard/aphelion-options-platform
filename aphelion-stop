@@ -1,0 +1,18 @@
+#!/bin/bash
+# APHELION Options Platform Stopper
+
+echo "🛑 Stopping APHELION platform..."
+
+if [ -f ".aphelion_pids" ]; then
+    while read -r pid; do
+        kill $pid 2>/dev/null
+    done < .aphelion_pids
+    rm .aphelion_pids
+fi
+
+# Kill any remaining processes
+pkill -f "node.*backend" 2>/dev/null
+pkill -f "python.*engine_server" 2>/dev/null
+pkill -f "electron" 2>/dev/null
+
+echo "✅ All APHELION services stopped."
