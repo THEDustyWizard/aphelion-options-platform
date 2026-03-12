@@ -85,6 +85,19 @@ export interface Recommendation {
   createdAt: string;
   isSaved?: boolean;
   isActedOn?: boolean;
+  calculationDetails?: CalculationDetails;
+  /** Live data from Schwab API when connected */
+  liveData?: {
+    bid: number;
+    ask: number;
+    last: number;
+    iv?: number;
+    delta?: number;
+    theta?: number;
+    gamma?: number;
+    vega?: number;
+    lastUpdated: string;
+  };
 }
 
 // ─── News ─────────────────────────────────────────────────────────────────────
@@ -200,4 +213,94 @@ export interface PnlScenario {
   ivChangePct: number;
   pnl: number;
   returnPct: number;
+}
+
+// ─── Calculation Transparency ─────────────────────────────────────────────────
+
+export interface TradeSignals {
+  /** Recommended entry price (ask or mid) */
+  buyAt: number;
+  /** Profit target price */
+  sellTarget: number;
+  /** Stop loss price */
+  stopLoss: number;
+  /** Breakeven price at expiry */
+  breakeven: number;
+  /** Expiration date MM/DD/YYYY */
+  expiration: string;
+  /** Days to expiration */
+  dte: number;
+  /** Profit target as % of premium */
+  profitTargetPct: number;
+  /** Stop loss as % of premium */
+  stopLossPct: number;
+}
+
+export interface CalculationDetails {
+  /** Pricing model used */
+  model: 'Black-Scholes' | 'Binomial' | 'Monte Carlo';
+
+  /** Model inputs */
+  inputs: {
+    underlyingPrice: number;
+    strikePrice: number;
+    impliedVol: number;          // decimal e.g. 0.26
+    historicalVol?: number;      // 30-day HV, decimal
+    timeToExpiryYears: number;
+    riskFreeRate: number;        // decimal e.g. 0.053
+    premium: number;             // what we pay
+  };
+
+  /** Intermediate values */
+  intermediate: {
+    d1: number;
+    d2: number;
+    nd1: number;
+    nd2: number;
+    theoreticalPrice: number;
+    ivVsHvSpread?: number;       // IV - HV in decimal
+    ivVsHvLabel?: string;        // e.g. "IV is 12% above 30-day HV"
+  };
+
+  /** Greeks */
+  greeks: {
+    delta: number;
+    gamma: number;
+    theta: number;   // $/day
+    vega: number;    // $ per 1% IV move
+    rho: number;     // $ per 1% rate move
+  };
+
+  /** Output metrics */
+  output: {
+    breakevenPrice: number;
+    breakevenFormula: string;    // e.g. "Strike + Premium = 195 + 2.45 = 197.45"
+    probabilityOfProfit: number; // 0-100
+    expectedReturn: number;      // dollar
+    maxLoss: number;
+    maxProfit: number | null;
+    riskRewardRatio: string;     // e.g. "1:4.2"
+  };
+
+  /** Why this strike was selected */
+  strikeSelectionReason: string;
+
+  /** Actionable trade signals */
+  tradeSignals: TradeSignals;
+}
+
+// ─── Schwab API ───────────────────────────────────────────────────────────────
+
+export interface SchwabCredentials {
+  appKey: string;       // obfuscated in storage
+  appSecret: string;    // obfuscated in storage
+  callbackUrl: string;
+}
+
+export interface SchwabConnectionStatus {
+  connected: boolean;
+  authenticated: boolean;
+  message: string;
+  accountId?: string;
+  lastConnected?: string | null;
 }

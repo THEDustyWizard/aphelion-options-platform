@@ -1,7 +1,24 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { WatchlistGroup, WatchlistAlert, MarketStatus } from '../types';
+import type { WatchlistGroup, WatchlistAlert, MarketStatus, SchwabConnectionStatus } from '../types';
 import { mockWatchlists, mockMarketStatus } from '../data/mockData';
+
+// ─── Simple obfuscation for credential storage ────────────────────────────────
+// Note: This is obfuscation, not true encryption. For a production Electron app,
+// use node's crypto module or Keytar. This prevents casual localStorage inspection.
+function obfuscate(s: string): string {
+  if (!s) return '';
+  return btoa(
+    s.split('').map((c, i) => String.fromCharCode(c.charCodeAt(0) ^ ((i % 7) + 11))).join('')
+  );
+}
+function deobfuscate(s: string): string {
+  if (!s) return '';
+  try {
+    const decoded = atob(s);
+    return decoded.split('').map((c, i) => String.fromCharCode(c.charCodeAt(0) ^ ((i % 7) + 11))).join('');
+  } catch { return ''; }
+}
 
 // ─── Market Store ─────────────────────────────────────────────────────────────
 interface MarketStore {
@@ -160,3 +177,66 @@ export const useScreenerStore = create<ScreenerStore>()((set) => ({
   setFilters: (f) => set((s) => ({ filters: { ...s.filters, ...f } })),
   resetFilters: () => set({ filters: defaultFilters }),
 }));
+
+// ─── Schwab API Store ─────────────────────────────────────────────────────────
+interface SchwabStore {
+  // Obfuscated credentials (persisted)
+  _appKeyEnc:    string;
+  _appSecretEnc: string;
+  callbackUrl:   string;
+  // Connection state (runtime only, not persisted)
+  status: SchwabConnectionStatus;
+  liveMode: boolean;
+  // Actions
+  saveCredentials: (appKey: string, appSecret: string, callbackUrl: string) => void;
+  getAppKey: () => string;
+  getAppSecret: () => string;
+  clearCredentials: () => void;
+  setStatus: (s: SchwabConnectionStatus) => void;
+  setLiveMode: (v: boolean) => void;
+  hasCredentials: () => boolean;
+}
+
+export const useSchwabStore = create<SchwabStore>()(
+  persist(
+    (set, get) => ({
+      _appKeyEnc:    '',
+      _appSecretEnc: '',
+      callbackUrl:   'https://127.0.0.1',
+      status: { connected: false, authenticated: false, message: 'NOT CONNECTED' },
+      liveMode: false,
+
+      saveCredentials: (appKey, appSecret, callbackUrl) =>
+        set({
+          _appKeyEnc:    obfuscate(appKey),
+          _appSecretEnc: obfuscate(appSecret),
+          callbackUrl,
+        }),
+
+      getAppKey:    () => deobfuscate(get()._appKeyEnc),
+      getAppSecret: () => deobfuscate(get()._appSecretEnc),
+
+      clearCredentials: () =>
+        set({
+          _appKeyEnc:    '',
+          _appSecretEnc: '',
+          callbackUrl:   'https://127.0.0.1',
+          status: { connected: false, authenticated: false, message: 'NOT CONNECTED' },
+          liveMode: false,
+        }),
+
+      setStatus: (s) => set({ status: s }),
+      setLiveMode: (v) => set({ liveMode: v }),
+      hasCredentials: () => !!get()._appKeyEnc,
+    }),
+    {
+      name: 'aphelion-schwab',
+      // Only persist credentials + callbackUrl, not runtime status
+      partialize: (s) => ({
+        _appKeyEnc:    s._appKeyEnc,
+        _appSecretEnc: s._appSecretEnc,
+        callbackUrl:   s.callbackUrl,
+      }),
+    }
+  )
+);

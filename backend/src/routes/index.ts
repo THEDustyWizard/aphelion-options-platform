@@ -6,6 +6,7 @@ import newsRoutes from './news.routes';
 import portfolioRoutes from './portfolio.routes';
 import calculationRoutes from './calculation.routes';
 import adminRoutes from './admin.routes';
+import schwabRoutes from './schwab.routes';
 
 export function registerRoutes(): Router {
   const router = Router();
@@ -26,6 +27,7 @@ export function registerRoutes(): Router {
   router.use('/news', newsRoutes);
   router.use('/portfolio', portfolioRoutes);
   router.use('/calculation', calculationRoutes);
+  router.use('/schwab', schwabRoutes);
   
   // Admin routes (protected)
   if (process.env.NODE_ENV !== 'production') {

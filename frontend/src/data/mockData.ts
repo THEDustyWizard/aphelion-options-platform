@@ -1,7 +1,114 @@
 import type {
   Recommendation, NewsItem, AiDigest, SectorSentiment,
-  WatchlistGroup, MarketStatus, OptionExpiry
+  WatchlistGroup, MarketStatus, OptionExpiry, CalculationDetails
 } from '../types';
+
+// ─── Shared helper: compute Black-Scholes d1/d2 inline for mock data ──────────
+function normCDF(x: number): number {
+  const a = [0.31938153, -0.356563782, 1.781477937, -1.821255978, 1.330274429];
+  const L = Math.abs(x);
+  const K = 1 / (1 + 0.2316419 * L);
+  let w = 1 - 1 / Math.sqrt(2 * Math.PI) * Math.exp(-L * L / 2) *
+    (a[0]*K + a[1]*K**2 + a[2]*K**3 + a[3]*K**4 + a[4]*K**5);
+  return x < 0 ? 1 - w : w;
+}
+
+function buildCalc(
+  S: number,    // underlying price
+  K: number,    // strike
+  T: number,    // time to expiry in years
+  r: number,    // risk-free rate
+  sigma: number, // implied vol
+  premium: number,
+  type: 'call' | 'put',
+  hvol: number,
+  strikeReason: string,
+): CalculationDetails {
+  const sqrtT = Math.sqrt(T);
+  const d1 = (Math.log(S / K) + (r + sigma * sigma / 2) * T) / (sigma * sqrtT);
+  const d2 = d1 - sigma * sqrtT;
+  const nd1 = normCDF(d1), nd2 = normCDF(d2);
+  const nNd1 = normCDF(-d1), nNd2 = normCDF(-d2);
+
+  const theoreticalPrice = type === 'call'
+    ? S * nd1 - K * Math.exp(-r * T) * nd2
+    : K * Math.exp(-r * T) * nNd2 - S * nNd1;
+
+  // Greeks
+  const phi_d1 = Math.exp(-d1 * d1 / 2) / Math.sqrt(2 * Math.PI);
+  const delta  = type === 'call' ? nd1 : nd1 - 1;
+  const gamma  = phi_d1 / (S * sigma * sqrtT);
+  const theta  = type === 'call'
+    ? (-(S * phi_d1 * sigma) / (2 * sqrtT) - r * K * Math.exp(-r * T) * nd2) / 365
+    : (-(S * phi_d1 * sigma) / (2 * sqrtT) + r * K * Math.exp(-r * T) * nNd2) / 365;
+  const vega = S * phi_d1 * sqrtT / 100;
+  const rho  = type === 'call'
+    ? K * T * Math.exp(-r * T) * nd2 / 100
+    : -K * T * Math.exp(-r * T) * nNd2 / 100;
+
+  const breakevenPrice = type === 'call' ? K + premium : K - premium;
+  const breakevenFormula = type === 'call'
+    ? `Strike + Premium = $${K} + $${premium.toFixed(2)} = $${breakevenPrice.toFixed(2)}`
+    : `Strike − Premium = $${K} − $${premium.toFixed(2)} = $${breakevenPrice.toFixed(2)}`;
+  const pop = type === 'call' ? (1 - nd2) * 100 : nd2 * 100; // simplified approximation
+  const profitTargetPct = 50;
+  const stopLossPct     = 50;
+  const sellTarget = +(premium * (1 + profitTargetPct / 100)).toFixed(2);
+  const stopLoss   = +(premium * (1 - stopLossPct / 100)).toFixed(2);
+  const maxLoss    = premium * 100;
+  const ivVsHvSpread = sigma - hvol;
+  const exp = new Date(Date.now() + T * 365 * 24 * 60 * 60 * 1000);
+  const expStr = `${(exp.getMonth()+1).toString().padStart(2,'0')}/${exp.getDate().toString().padStart(2,'0')}/${exp.getFullYear()}`;
+
+  return {
+    model: 'Black-Scholes',
+    inputs: {
+      underlyingPrice: S,
+      strikePrice: K,
+      impliedVol: sigma,
+      historicalVol: hvol,
+      timeToExpiryYears: +T.toFixed(6),
+      riskFreeRate: r,
+      premium,
+    },
+    intermediate: {
+      d1: +d1.toFixed(6),
+      d2: +d2.toFixed(6),
+      nd1: +nd1.toFixed(6),
+      nd2: +nd2.toFixed(6),
+      theoreticalPrice: +theoreticalPrice.toFixed(4),
+      ivVsHvSpread: +ivVsHvSpread.toFixed(4),
+      ivVsHvLabel: `IV is ${(Math.abs(ivVsHvSpread) * 100).toFixed(1)}% ${ivVsHvSpread > 0 ? 'ABOVE' : 'BELOW'} 30-day HV (${(hvol*100).toFixed(1)}%) — ${ivVsHvSpread > 0.05 ? 'elevated premium; consider selling instead' : ivVsHvSpread < -0.05 ? 'options are cheap; favorable for buying' : 'IV roughly in line with HV'}`,
+    },
+    greeks: {
+      delta: +delta.toFixed(4),
+      gamma: +gamma.toFixed(6),
+      theta: +theta.toFixed(4),
+      vega:  +vega.toFixed(4),
+      rho:   +rho.toFixed(4),
+    },
+    output: {
+      breakevenPrice: +breakevenPrice.toFixed(2),
+      breakevenFormula,
+      probabilityOfProfit: +pop.toFixed(2),
+      expectedReturn: +(pop / 100 * sellTarget * 100 - (1 - pop / 100) * maxLoss).toFixed(2),
+      maxLoss: +maxLoss.toFixed(2),
+      maxProfit: type === 'call' ? null : +(K * 100 - premium * 100).toFixed(2),
+      riskRewardRatio: `1:${(sellTarget / stopLoss).toFixed(1)}`,
+    },
+    strikeSelectionReason: strikeReason,
+    tradeSignals: {
+      buyAt: +premium.toFixed(2),
+      sellTarget,
+      stopLoss,
+      breakeven: +breakevenPrice.toFixed(2),
+      expiration: expStr,
+      dte: Math.round(T * 365),
+      profitTargetPct,
+      stopLossPct,
+    },
+  };
+}
 
 // ─── Market Status ────────────────────────────────────────────────────────────
 export const mockMarketStatus: MarketStatus = {
@@ -49,6 +156,13 @@ export const mockRecommendations: Recommendation[] = [
     linkedNewsIds: ['news-gs-aapl', 'news-aapl-sweep'],
     schwabSymbol: '.AAPL260418C195',
     createdAt: new Date(Date.now() - 4 * 60_000).toISOString(),
+    calculationDetails: buildCalc(
+      190.50, 195, 37/365, 0.053, 0.26, 2.45, 'call', 0.21,
+      '$195 strike selected: ~0.35 delta OTM call, approximately 2.4% above current price ($190.50). ' +
+      'This strike offers favorable risk/reward: low enough premium to reduce cost basis while still capturing ' +
+      'meaningful upside if AAPL moves to all-time highs post-earnings. Avoids deep ITM (expensive, less leverage) ' +
+      'and far OTM (lottery ticket). GS price target of $215 makes this strike achievable within DTE.'
+    ),
   },
   {
     id: 'rec-nvda-may-900c',
@@ -81,6 +195,14 @@ export const mockRecommendations: Recommendation[] = [
     linkedNewsIds: ['news-nvda-earnings'],
     schwabSymbol: '.NVDA260516C900',
     createdAt: new Date(Date.now() - 8 * 60_000).toISOString(),
+    calculationDetails: buildCalc(
+      872.50, 900, 65/365, 0.053, 0.38, 8.10, 'call', 0.32,
+      '$900 strike selected: ~0.38 delta call, roughly 3.1% above current price ($872.50). ' +
+      'Earnings catalyst has passed; IV crush risk reduced. 65 DTE provides enough time for post-earnings momentum ' +
+      'to develop. $900 is a key psychological level and prior resistance — a breakout above it signals continuation. ' +
+      'IV rank of 74 is elevated, but with earnings behind us, May calls capture the full AI conference cycle (GTC Apr 22). ' +
+      'Position sizing: 1-2 contracts max given $810 max-loss per contract.'
+    ),
   },
   {
     id: 'rec-spy-apr-580p',
@@ -113,6 +235,13 @@ export const mockRecommendations: Recommendation[] = [
     linkedNewsIds: ['news-fed-hold', 'news-vix-spike'],
     schwabSymbol: '.SPY260404P580',
     createdAt: new Date(Date.now() - 22 * 60_000).toISOString(),
+    calculationDetails: buildCalc(
+      598.23, 580, 23/365, 0.053, 0.19, 3.20, 'put', 0.16,
+      '$580 put selected: ~3% OTM from current SPY price ($598.23). Targets the 200-day MA support zone at $578-$582. ' +
+      'If macro deteriorates post-FOMC hold, $580 is the first major structural support. A break below $580 on volume ' +
+      'would signal broader market weakness. Avoids ATM puts (expensive, less leverage on a move) while still capturing ' +
+      'meaningful directional exposure. 23 DTE aligns with FOMC date (Mar 18) giving 5 days of post-decision resolution.'
+    ),
   },
   {
     id: 'rec-meta-may-580c',
